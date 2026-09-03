@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getScenario } from "@/lib/scenarios";
-import { BOOTSTRAP_TRIGGER } from "@/lib/promptBuilder";
 import { ChatMessage } from "@/lib/types";
 
 const MAX_MESSAGES = 20;
@@ -16,14 +15,11 @@ export default function ChatPage() {
   const scenario = getScenario(params.id);
   const level = Number(searchParams.get("level")) || 1;
 
-  // apiHistory включає приховане стартове повідомлення, messages — лише видимі репліки
-  const [apiHistory, setApiHistory] = useState<ChatMessage[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const startedRef = useRef(false);
   const windowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,31 +27,6 @@ export default function ChatPage() {
       windowRef.current.scrollTop = windowRef.current.scrollHeight;
     }
   }, [messages, isSending]);
-
-  useEffect(() => {
-    if (!scenario || startedRef.current) return;
-    startedRef.current = true;
-    const bootstrapHistory: ChatMessage[] = [{ role: "user", text: BOOTSTRAP_TRIGGER }];
-    setIsSending(true);
-    fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scenarioId: scenario.id, level, history: bootstrapHistory }),
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.error) {
-          setError(data.error);
-          return;
-        }
-        const reply: ChatMessage = { role: "assistant", text: data.reply };
-        setApiHistory([...bootstrapHistory, reply]);
-        setMessages([reply]);
-      })
-      .catch(() => setError("Не вдалося зв'язатися з сервером."))
-      .finally(() => setIsSending(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenario?.id]);
 
   if (!scenario) {
     return (
@@ -80,9 +51,7 @@ export default function ChatPage() {
     setInput("");
 
     const userMsg: ChatMessage = { role: "user", text };
-    const newApiHistory = [...apiHistory, userMsg];
     const newMessages = [...messages, userMsg];
-    setApiHistory(newApiHistory);
     setMessages(newMessages);
     setIsSending(true);
 
@@ -90,7 +59,7 @@ export default function ChatPage() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scenarioId: sc.id, level, history: newApiHistory }),
+        body: JSON.stringify({ scenarioId: sc.id, level, history: newMessages }),
       });
       const data = await res.json();
       if (data.error) {
@@ -98,7 +67,6 @@ export default function ChatPage() {
         return;
       }
       const reply: ChatMessage = { role: "assistant", text: data.reply };
-      setApiHistory([...newApiHistory, reply]);
       setMessages([...newMessages, reply]);
     } catch {
       setError("Не вдалося зв'язатися з сервером.");
@@ -157,6 +125,12 @@ export default function ChatPage() {
       {error && <div className="error-box">{error}</div>}
 
       <div className="chat-window" ref={windowRef}>
+        {messages.length === 0 && !isSending && (
+          <p className="loading-text">
+            Почніть розмову першим повідомленням — опишіть ситуацію так, як зробили б у реальному
+            житті.
+          </p>
+        )}
         {messages.map((m, i) => (
           <div key={i} className={`bubble-row ${m.role}`}>
             <div className={`bubble ${m.role}`}>{m.text}</div>
@@ -174,11 +148,12 @@ export default function ChatPage() {
       ) : (
         <div className="chat-input-row">
           <textarea
-            placeholder="Напишіть свою відповідь і натисніть Enter…"
+            placeholder="Напишіть своє повідомлення і натисніть Enter…"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
             disabled={isSending || isFinishing}
+            autoFocus
           />
           <button className="btn" onClick={sendMessage} disabled={isSending || isFinishing || !input.trim()}>
             Надіслати

@@ -4,7 +4,7 @@ import { ChatMessage } from "./types";
 // Отримати ключ: https://console.groq.com/keys
 
 const apiKey = process.env.GROQ_API_KEY;
-const modelName = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+const modelName = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 const ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 
 interface GroqMessage {
@@ -12,7 +12,7 @@ interface GroqMessage {
   content: string;
 }
 
-async function callGroq(messages: GroqMessage[]): Promise<string> {
+async function callGroq(messages: GroqMessage[], temperature: number): Promise<string> {
   const res = await fetch(ENDPOINT, {
     method: "POST",
     headers: {
@@ -22,7 +22,7 @@ async function callGroq(messages: GroqMessage[]): Promise<string> {
     body: JSON.stringify({
       model: modelName,
       messages,
-      temperature: 0.8,
+      temperature,
     }),
   });
 
@@ -53,7 +53,8 @@ export async function generateCharacterReply(
       content: h.text,
     })),
   ];
-  return callGroq(messages);
+  // Трохи нижча температура за дефолтну — стабільніша граматика при збереженні живості репліки.
+  return callGroq(messages, 0.7);
 }
 
 export async function generateJudgeReport(prompt: string): Promise<string> {
@@ -72,5 +73,6 @@ export async function generateJudgeReport(prompt: string): Promise<string> {
       practicalTips: ["[DEV MODE] Отримайте безкоштовний ключ на https://console.groq.com/keys"],
     });
   }
-  return callGroq([{ role: "user", content: prompt }]);
+  // Низька температура — оцінка та JSON мають бути стабільними і послідовними.
+  return callGroq([{ role: "user", content: prompt }], 0.3);
 }
