@@ -274,6 +274,23 @@ a {
   max-height: 140px;
 }
 
+.mic-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.mic-btn-active {
+    background: var(--danger);
+    color: #fff;
+    border-color: var(--danger);
+}
+
+.example-dialogue {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 .chat-footer-row {
   display: flex;
   justify-content: space-between;
