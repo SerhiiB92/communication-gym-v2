@@ -8,71 +8,75 @@ const modelName = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 const ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 
 interface GroqMessage {
-  role: "system" | "user" | "assistant";
-  content: string;
+    role: "system" | "user" | "assistant";
+    content: string;
 }
 
 async function callGroq(messages: GroqMessage[], temperature: number): Promise<string> {
-  const res = await fetch(ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: modelName,
-      messages,
-      temperature,
-    }),
-  });
+    const res = await fetch(ENDPOINT, {
+          method: "POST",
+          headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+                  model: modelName,
+                  messages,
+                  temperature,
+          }),
+    });
 
   if (!res.ok) {
-    const errText = await res.text().catch(() => "");
-    throw new Error(`Groq API error ${res.status}: ${errText}`);
+        const errText = await res.text().catch(() => "");
+        throw new Error(`Groq API error ${res.status}: ${errText}`);
   }
 
   const data = await res.json();
-  const content = data?.choices?.[0]?.message?.content;
-  if (typeof content !== "string") {
-    throw new Error("Groq API: неочікуваний формат відповіді");
-  }
-  return content;
+    const content = data?.choices?.[0]?.message?.content;
+    if (typeof content !== "string") {
+          throw new Error("Groq API: неочікуваний формат відповіді");
+    }
+    return content;
 }
 
 export async function generateCharacterReply(
-  systemPrompt: string,
-  history: ChatMessage[]
-): Promise<string> {
-  if (!apiKey) {
-    return "[DEV MODE] GROQ_API_KEY не задано в .env.local — це заглушка відповіді персонажа. Додайте безкоштовний ключ з console.groq.com/keys, щоб отримувати реальні відповіді.";
-  }
-  const messages: GroqMessage[] = [
-    { role: "system", content: systemPrompt },
-    ...history.map((h) => ({
-      role: (h.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
-      content: h.text,
-    })),
-  ];
-  // Трохи нижча температура за дефолтну — стабільніша граматика при збереженні живості репліки.
+    systemPrompt: string,
+    history: ChatMessage[]
+  ): Promise<string> {
+    if (!apiKey) {
+          return "[DEV MODE] GROQ_API_KEY не задано в .env.local — це заглушка відповіді персонажа. Додайте безкоштовний ключ з console.groq.com/keys, щоб отримувати реальні відповіді.";
+    }
+    const messages: GroqMessage[] = [
+      { role: "system", content: systemPrompt },
+          ...history.map((h) => ({
+                  role: (h.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
+                  content: h.text,
+          })),
+        ];
+    // Трохи нижча температура за дефолтну — стабільніша граматика при збереженні живості репліки.
   return callGroq(messages, 0.7);
 }
 
 export async function generateJudgeReport(prompt: string): Promise<string> {
-  if (!apiKey) {
-    return JSON.stringify({
-      scores: {
-        clarity: 60,
-        empathy: 60,
-        listening: 60,
-        facts: 60,
-        ownership: 60,
-        psychSafety: 60,
-      },
-      whatWentWell: ["[DEV MODE] Додайте GROQ_API_KEY в .env.local, щоб отримати реальну оцінку."],
-      whatToImprove: ["[DEV MODE] Це заглушка, а не справжній аналіз розмови."],
-      practicalTips: ["[DEV MODE] Отримайте безкоштовний ключ на https://console.groq.com/keys"],
-    });
-  }
-  // Низька температура — оцінка та JSON мають бути стабільними і послідовними.
+    if (!apiKey) {
+          return JSON.stringify({
+                  scores: {
+                            clarity: 60,
+                            empathy: 60,
+                            listening: 60,
+                            facts: 60,
+                            ownership: 60,
+                            psychSafety: 60,
+                  },
+                  whatWentWell: ["[DEV MODE] Додайте GROQ_API_KEY в .env.local, щоб отримати реальну оцінку."],
+                  whatToImprove: ["[DEV MODE] Це заглушка, а не справжній аналіз розмови."],
+                  practicalTips: ["[DEV MODE] Отримайте безкоштовний ключ на https://console.groq.com/keys"],
+                  exampleDialogue: [
+                    { role: "manager", text: "[DEV MODE] Приклад діалогу з'явиться тут після додавання GROQ_API_KEY." },
+                    { role: "character", text: "[DEV MODE] Це заглушка." },
+                          ],
+          });
+    }
+    // Низька температура — оцінка та JSON мають бути стабільними і послідовними.
   return callGroq([{ role: "user", content: prompt }], 0.3);
 }
