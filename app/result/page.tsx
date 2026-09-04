@@ -130,4 +130,5 @@ export default function ResultPage() {
                         </Link>
                 </div>
           </div>
-        );</div>
+          );
+}
