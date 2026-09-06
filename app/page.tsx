@@ -13,21 +13,23 @@ export default function HomePage() {
         отримаєте детальний розбір і оцінку за 6 критеріями.
       </p>
 
-      {order.map((cat) => (
-        <div key={cat}>
-          <div className="category-heading">{categoryLabels[cat]}</div>
-          <div className="card-grid">
-            {scenarios
-              .filter((s) => s.category === cat)
-              .map((s) => (
-                <Link key={s.id} href={`/scenario/${s.id}`} className="scenario-card">
-                  <p className="scenario-card-title">{s.titleUa}</p>
-                  <p className="scenario-card-short">{s.shortUa}</p>
-                </Link>
-              ))}
+      {order
+        .filter((cat) => scenarios.some((s) => s.category === cat))
+        .map((cat) => (
+          <div key={cat}>
+            <div className="category-heading">{categoryLabels[cat]}</div>
+            <div className="card-grid">
+              {scenarios
+                .filter((s) => s.category === cat)
+                .map((s) => (
+                  <Link key={s.id} href={`/scenario/${s.id}`} className="scenario-card">
+                    <p className="scenario-card-title">{s.titleUa}</p>
+                    <p className="scenario-card-short">{s.shortUa}</p>
+                  </Link>
+                ))}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
     </div>
   );
 }
